@@ -19,6 +19,7 @@ using namespace chatpp;
 chat_client::chat_client(websocketpp::log::level log_level) {
 	client_.set_access_channels(log_level);
 	client_.clear_access_channels(websocketpp::log::alevel::frame_payload);
+	client_.set_max_message_size(64 * 1024);
 	// Initialize ASIO
 	client_.init_asio();
 	// Register our message handler

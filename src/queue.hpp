@@ -2,6 +2,7 @@
 #define __DEF_QUEUE_H___
 
 #include <condition_variable>
+#include <cstddef>
 #include <mutex>
 #include <optional>
 #include <queue>
@@ -15,7 +16,10 @@ namespace chatpp {
 		std::mutex mut_;
 		std::condition_variable data_cond_;
 		bool stopped_ = false;
+		std::size_t max_size_;
 	public:
+		explicit message_queue(std::size_t max_size = 1024) : max_size_(max_size) {}
+
 		template <class T>
 		void enqueue(T&& e) {
 			{
@@ -24,6 +28,9 @@ namespace chatpp {
 					return;
 				}
 				messages_queue_.push(std::forward<T>(e));
+				if (messages_queue_.size() > max_size_) {
+					messages_queue_.pop();
+				}
 			}
 			data_cond_.notify_one();
 		}

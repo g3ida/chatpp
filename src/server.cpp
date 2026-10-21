@@ -15,6 +15,7 @@ chat_server::chat_server(websocketpp::log::level log_level) {
 	// Set logging settings
 	server_.set_access_channels(log_level);
 	server_.clear_access_channels(websocketpp::log::alevel::frame_payload);
+	server_.set_max_message_size(64 * 1024);
 	// Initialize Asio
 	server_.init_asio();			
 	// Register our message handler
