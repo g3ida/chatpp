@@ -47,7 +47,9 @@ void chat_server::on_recieve_message(server*, websocketpp::connection_hdl hdl, c
 			case message::type::public_key:
 				break;
 			case message::type::text:
-				msg_queue_.enqueue(std::make_pair(*get_nickname(hdl), std::move(m.content)));
+				if (auto it = get_nickname(hdl); it != nicknames_.end()) {
+					msg_queue_.enqueue(std::make_pair(*it, std::move(m.content)));
+				}
 				break;
 			}
 		}
