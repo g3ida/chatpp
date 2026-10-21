@@ -22,6 +22,7 @@
 #include "message.hpp"
 
 #include <string>
+#include <thread>
 #include <vector>
 
 using websocketpp::lib::placeholders::_1;
@@ -35,7 +36,9 @@ namespace chatpp {
 	class chat_server {
 	public :
 		chat_server(websocketpp::log::level log_level = websocketpp::log::alevel::none);
+		~chat_server();
 		void start(int port = 9002);
+		void stop();
 	private :
 		void on_receive_message(server*, websocketpp::connection_hdl hdl, client_message_ptr_t msg);
 		void on_close(server*, websocketpp::connection_hdl hdl);
@@ -47,6 +50,7 @@ namespace chatpp {
 		std::vector<websocketpp::connection_hdl> handlers_;
 		std::vector<std::string> nicknames_;
 		websocketpp::server<websocketpp::config::asio> server_;
+		std::thread thread_;
 	};
 }
 

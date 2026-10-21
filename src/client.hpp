@@ -23,6 +23,7 @@
 #include <atomic>
 #include <mutex>
 #include <string>
+#include <thread>
 
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
@@ -43,7 +44,9 @@ namespace chatpp {
 			connecting
 		};
 		chat_client(websocketpp::log::level log_level = websocketpp::log::alevel::none);
+		~chat_client();
 		void start(std::string URI);
+		void stop();
 		void send(std::string msg);
 		void send_nickname(std::string nickname);
 		status getStatus() const;
@@ -64,6 +67,7 @@ namespace chatpp {
 		std::string server_str_;
 		std::string status_msg_;
 		mutable std::mutex status_mutex_;
+		std::thread thread_;
 	};
 }
 #endif

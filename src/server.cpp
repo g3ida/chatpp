@@ -23,6 +23,19 @@ chat_server::chat_server(websocketpp::log::level log_level) {
 	server_.set_fail_handler(bind(&chat_server::on_fail, this, &server_, ::_1));
 }
 
+chat_server::~chat_server() {
+	stop();
+}
+
+void chat_server::stop() {
+	server_.stop();
+	if (thread_.joinable()) {
+		thread_.join();
+	}
+	websocketpp::lib::error_code ec;
+	server_.stop_listening(ec);
+}
+
 // Callback to handle incoming messages
 void chat_server::on_receive_message(server*, websocketpp::connection_hdl hdl, client_message_ptr_t msg) {
 	if (msg->get_opcode() != websocketpp::frame::opcode::text) {
@@ -63,8 +76,7 @@ void chat_server::start(int port) {
 	// Start the server accept loop
 	server_.start_accept();
 	// Start the ASIO io_service run loop in another thread
-	std::thread t([this]() { server_.run(); });
-	t.detach();
+	thread_ = std::thread([this]() { server_.run(); });
 }
 
 std::vector<std::string>::iterator chat_server::get_nickname(websocketpp::connection_hdl hdl) {

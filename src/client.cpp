@@ -28,6 +28,19 @@ chat_client::chat_client(websocketpp::log::level log_level) {
 	client_.set_fail_handler(websocketpp::lib::bind(&chat_client::on_fail, this, &client_, ::_1));
 }
 
+chat_client::~chat_client() {
+	stop();
+}
+
+void chat_client::stop() {
+	status_ = status::closed;
+	msg_queue_.stop();
+	client_.stop();
+	if (thread_.joinable()) {
+		thread_.join();
+	}
+}
+
 void chat_client::start(std::string URI) {
 	try {
 		websocketpp::lib::error_code ec;
@@ -44,8 +57,7 @@ void chat_client::start(std::string URI) {
 		// exchanged until the event loop starts running in the next line.
 		cnx_ptr_ = client_.connect(cnx_ptr_);
 		status_ = status::connecting;
-		std::thread t([this]() { client_.run(); });
-		t.detach();
+		thread_ = std::thread([this]() { client_.run(); });
 	}
 	catch (websocketpp::exception const& e) {
 		status_ = status::failed;
