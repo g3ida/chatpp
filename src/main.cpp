@@ -9,6 +9,18 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+	std::string sanitize(std::string text) {
+		for (auto& c : text) {
+			auto value = static_cast<unsigned char>(c);
+			if (value < 0x20 || value == 0x7f) {
+				c = '?';
+			}
+		}
+		return text;
+	}
+}
+
 int main(int argc, char* argv[]) {
 	// Create a server endpoint
 
@@ -74,14 +86,14 @@ int main(int argc, char* argv[]) {
 		std::thread t([&]() { 
 			while (auto item = cclient.msg_queue_.wait_pop_message()) {
 				auto [nickname, msg] = *item;
-				std::cout << rang::fg::yellow << rang::style::bold << nickname <<
-					" > " << msg << rang::fg::reset << std::endl;
+				std::cout << rang::fg::yellow << rang::style::bold << sanitize(nickname) <<
+					" > " << sanitize(msg) << rang::fg::reset << std::endl;
 			}	
 		});
 
 		std::string message;
 		while (true) {
-			std::cout  << rang::style::bold << nickname << "> " << rang::fg::reset;
+			std::cout  << rang::style::bold << sanitize(nickname) << "> " << rang::fg::reset;
 			if (!std::getline(std::cin, message)) {
 				break;
 			}
