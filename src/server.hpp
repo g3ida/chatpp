@@ -37,7 +37,7 @@ namespace chatpp {
 	public :
 		chat_server(websocketpp::log::level log_level = websocketpp::log::alevel::none);
 		~chat_server();
-		void start(int port = 9002);
+		void start(const std::string& host, int port = 9002);
 		void stop();
 	private :
 		void on_receive_message(server*, websocketpp::connection_hdl hdl, client_message_ptr_t msg);

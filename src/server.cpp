@@ -73,8 +73,8 @@ void chat_server::on_receive_message(server*, websocketpp::connection_hdl hdl, c
 	}
 }
 
-void chat_server::start(int port) {
-	server_.listen(port);
+void chat_server::start(const std::string& host, int port) {
+	server_.listen(host, std::to_string(port));
 	// Start the server accept loop
 	server_.start_accept();
 	// Start the ASIO io_service run loop in another thread

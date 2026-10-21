@@ -27,12 +27,15 @@ int main(int argc, char* argv[]) {
 		//std::cout << create_model() << std::endl;
 		CLI::App app{ "Chat++" };
 
-		int d = -1;
 		int port = 9002;
+		std::string host = "127.0.0.1";
 		std::string URI;
 
 		//add configuration file
 		app.set_config("--conf")->default_val("conf.ini");
+
+		app.add_option("-H,--host", host,
+			"specify the listening address")->default_val("127.0.0.1");
 
 		app.add_option("-p,--port", port,
 			"specify the listening port")->default_val("9002");
@@ -42,8 +45,9 @@ int main(int argc, char* argv[]) {
 		chatpp::chat_server cserver;
 		chatpp::chat_client cclient;
 
-		cserver.start(port);
-		std::cout << rang::fg::yellow << "Listening on port : " << port << std::endl << rang::fg::reset;
+		cserver.start(host, port);
+		std::cout << rang::fg::yellow << "Listening on " << host << ":" <<
+			port << std::endl << rang::fg::reset;
 
 
 		std::string nickname;
