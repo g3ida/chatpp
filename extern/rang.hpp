@@ -23,7 +23,6 @@
 #define _WIN32_WINNT _WIN32_WINNT_VISTA
 #endif
 
-#include <winsock2.h>
 #include <windows.h>
 #include <io.h>
 #include <memory>
