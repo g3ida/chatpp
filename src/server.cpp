@@ -32,6 +32,9 @@ void chat_server::on_receive_message(server*, websocketpp::connection_hdl hdl, c
 		message m = nlohmann::json::parse(msg->get_payload()).get<message>();
 		switch (m.message_type) {
 		case message::type::nickname:
+			if (m.content.empty() || m.content.size() > 32) {
+				break;
+			}
 			if (auto it = get_nickname(hdl); it != nicknames_.end()) {
 				(*it) = m.content;
 			}
