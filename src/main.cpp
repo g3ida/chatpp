@@ -60,8 +60,8 @@ int main(int argc, char* argv[]) {
 		cclient.send_nickname(nickname);
 		
 		std::thread t([&]() { 
-			while (true) {
-				auto [nickname, msg] = cserver.msg_queue_.wait_pop_message();
+			while (auto item = cserver.msg_queue_.wait_pop_message()) {
+				auto [nickname, msg] = *item;
 				std::cout << rang::fg::yellow << rang::style::bold << nickname <<
 					" > " << msg << rang::fg::reset << std::endl;
 			}	
