@@ -34,7 +34,10 @@ void chat_client::start(std::string URI) {
 		cnx_ptr_ = client_.get_connection(URI, ec);
 		if (ec) {
 			status_ = status::failed;
-			status_msg_ = ec.message();
+			{
+				std::lock_guard<std::mutex> lk(status_mutex_);
+				status_msg_ = ec.message();
+			}
 			throw websocketpp::exception(ec);
 		}
 		// Note that connect here only requests a connection. No network messages are
@@ -46,7 +49,10 @@ void chat_client::start(std::string URI) {
 	}
 	catch (websocketpp::exception const& e) {
 		status_ = status::failed;
-		status_msg_ = e.m_code.message();
+		{
+			std::lock_guard<std::mutex> lk(status_mutex_);
+			status_msg_ = e.m_code.message();
+		}
 		throw;
 	}
 }
@@ -65,21 +71,24 @@ void chat_client::send_nickname(std::string nickname) {
 	client_.send(cnx_ptr_->get_handle(), json_str.data(), json_str.size(), websocketpp::frame::opcode::text);
 }
 
-chat_client::status chat_client::getStatus() {
-	return status_;
+chat_client::status chat_client::getStatus() const {
+	return status_.load();
 }
 
 std::string chat_client::getServerStr() {
+	std::lock_guard<std::mutex> lk(status_mutex_);
 	return server_str_;
 }
 
 std::string chat_client::getErrorMessage() {
+	std::lock_guard<std::mutex> lk(status_mutex_);
 	return status_msg_;
 }
 
 void chat_client::on_open(client_t* client, websocketpp::connection_hdl hdl) {
 	status_ = status::open;
 	client_t::connection_ptr con = client->get_con_from_hdl(hdl);
+	std::lock_guard<std::mutex> lk(status_mutex_);
 	server_str_ = con->get_response_header("Server");
 }
 
@@ -90,12 +99,14 @@ void chat_client::on_close(client_t* client, websocketpp::connection_hdl hdl) {
 	s << "close code: " << con->get_remote_close_code() << " ("
 		<< websocketpp::close::status::get_string(con->get_remote_close_code())
 		<< "), close reason: " << con->get_remote_close_reason();
+	std::lock_guard<std::mutex> lk(status_mutex_);
 	server_str_ = s.str();
 }
 
 void chat_client::on_fail(client_t* client, websocketpp::connection_hdl hdl) {
 	status_ = status::failed;
 	client_t::connection_ptr con = client->get_con_from_hdl(hdl);
+	std::lock_guard<std::mutex> lk(status_mutex_);
 	server_str_ = con->get_response_header("Server");
 	status_msg_ = con->get_ec().message();
 }
@@ -104,6 +115,7 @@ void chat_client::on_message(websocketpp::client<websocketpp::config::asio_clien
 	websocketpp::lib::error_code ec;
 	c->send(hdl, msg->get_payload(), msg->get_opcode(), ec);
 	if (ec) {
+		std::lock_guard<std::mutex> lk(status_mutex_);
 		status_msg_ = ec.message();
 	}
 }
