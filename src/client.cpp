@@ -35,7 +35,7 @@ void chat_client::start(std::string URI) {
 		if (ec) {
 			status_ = status::failed;
 			status_msg_ = ec.message();
-			throw new websocketpp::exception(ec);
+			throw websocketpp::exception(ec);
 		}
 		// Note that connect here only requests a connection. No network messages are
 		// exchanged until the event loop starts running in the next line.
