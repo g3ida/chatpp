@@ -5,7 +5,6 @@
 
 #include "message.hpp"
 
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -70,7 +69,6 @@ void chat_server::on_receive_message(server*, websocketpp::connection_hdl hdl, c
 		}
 	}
 	catch (std::exception&) {
-		std::cout << "invalid message" << std::endl;
 	}
 }
 

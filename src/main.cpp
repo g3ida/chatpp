@@ -1,5 +1,6 @@
 #include "rang.hpp"
 #include <chrono>
+#include <mutex>
 #include <thread>
 #include "queue.hpp"
 #include "client.hpp"
@@ -81,10 +82,12 @@ int main(int argc, char* argv[]) {
 		}
 
 		cclient.send_nickname(nickname);
-		
+
+		std::mutex print_mutex;
 		std::thread t([&]() { 
 			while (auto item = cclient.msg_queue_.wait_pop_message()) {
 				auto [nickname, msg] = *item;
+				std::lock_guard<std::mutex> lk(print_mutex);
 				std::cout << rang::fg::yellow << rang::style::bold << sanitize(nickname) <<
 					" > " << sanitize(msg) << rang::fg::reset << std::endl;
 			}	
@@ -92,7 +95,10 @@ int main(int argc, char* argv[]) {
 
 		std::string message;
 		while (true) {
-			std::cout  << rang::style::bold << sanitize(nickname) << "> " << rang::fg::reset;
+			{
+				std::lock_guard<std::mutex> lk(print_mutex);
+				std::cout << rang::style::bold << sanitize(nickname) << "> " << rang::fg::reset;
+			}
 			if (!std::getline(std::cin, message)) {
 				break;
 			}
