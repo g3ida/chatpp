@@ -3,17 +3,14 @@
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 
-#include "queue.hpp"
 #include "message.hpp"
 
 #include <iostream>
-#include <sstream>
-#include <functional>
+#include <string>
 #include <vector>
-#include <map>
-#include <thread>
 
 using namespace chatpp;
+
 chat_server::chat_server(websocketpp::log::level log_level) {
 	// Set logging settings
 	server_.set_access_channels(log_level);
@@ -21,41 +18,40 @@ chat_server::chat_server(websocketpp::log::level log_level) {
 	// Initialize Asio
 	server_.init_asio();			
 	// Register our message handler
-	server_.set_message_handler(bind(&chat_server::on_recieve_message, this, &server_, ::_1, ::_2));
+	server_.set_message_handler(bind(&chat_server::on_receive_message, this, &server_, ::_1, ::_2));
+	server_.set_close_handler(bind(&chat_server::on_close, this, &server_, ::_1));
+	server_.set_fail_handler(bind(&chat_server::on_fail, this, &server_, ::_1));
 }
 
 // Callback to handle incoming messages
-void chat_server::on_recieve_message(server*, websocketpp::connection_hdl hdl, client_message_ptr_t msg) {
-	if (msg->get_opcode() == websocketpp::frame::opcode::text) {
-		try {
-			std::stringstream ss;
-			ss << msg->get_payload();	
-			message m;
-			nlohmann::json j;
-			j << ss;
-			j.get_to(m);
-			switch (m.message_type) {
-			case message::type::nickname:
-				if (auto it = get_nickname(hdl); it != nicknames_.end()) {
-					 (*it) = m.content;
-				}
-				else {
-					handlers_.emplace_back(hdl);
-					nicknames_.emplace_back(m.content);
-				}
-				break;
-			case message::type::public_key:
-				break;
-			case message::type::text:
-				if (auto it = get_nickname(hdl); it != nicknames_.end()) {
-					msg_queue_.enqueue(std::make_pair(*it, std::move(m.content)));
-				}
-				break;
+void chat_server::on_receive_message(server*, websocketpp::connection_hdl hdl, client_message_ptr_t msg) {
+	if (msg->get_opcode() != websocketpp::frame::opcode::text) {
+		return;
+	}
+	try {
+		message m = nlohmann::json::parse(msg->get_payload()).get<message>();
+		switch (m.message_type) {
+		case message::type::nickname:
+			if (auto it = get_nickname(hdl); it != nicknames_.end()) {
+				(*it) = m.content;
 			}
+			else {
+				handlers_.emplace_back(hdl);
+				nicknames_.emplace_back(m.content);
+			}
+			break;
+		case message::type::public_key:
+			break;
+		case message::type::text:
+			if (auto it = get_nickname(hdl); it != nicknames_.end()) {
+				m.nickname = *it;
+				broadcast(m);
+			}
+			break;
 		}
-		catch (std::exception& e) {
-			std::cout << e.what() << std::endl;
-		}
+	}
+	catch (std::exception& e) {
+		std::cout << e.what() << std::endl;
 	}
 }
 
@@ -71,7 +67,7 @@ void chat_server::start(int port) {
 std::vector<std::string>::iterator chat_server::get_nickname(websocketpp::connection_hdl hdl) {
 	if (!hdl.expired()) {
 		auto cnx = hdl.lock();
-		for (int i = 0; i < handlers_.size(); ++i) {
+		for (size_t i = 0; i < handlers_.size(); ++i) {
 			if (!handlers_[i].expired()) {
 				if (handlers_[i].lock() == cnx) {
 					return (nicknames_.begin() + i);
@@ -80,4 +76,52 @@ std::vector<std::string>::iterator chat_server::get_nickname(websocketpp::connec
 		}
 	}
 	return nicknames_.end();
+}
+
+void chat_server::remove_handler(websocketpp::connection_hdl hdl) {
+	auto target = hdl.lock();
+	if (!target) {
+		return;
+	}
+	for (size_t i = 0; i < handlers_.size(); ++i) {
+		auto current = handlers_[i].lock();
+		if (current && current == target) {
+			handlers_.erase(handlers_.begin() + i);
+			nicknames_.erase(nicknames_.begin() + i);
+			return;
+		}
+	}
+}
+
+void chat_server::broadcast(const message& msg) {
+	nlohmann::json j;
+	to_json(j, msg);
+	const std::string payload = j.dump();
+
+	for (size_t i = 0; i < handlers_.size();) {
+		auto hdl = handlers_[i].lock();
+		if (!hdl) {
+			handlers_.erase(handlers_.begin() + i);
+			nicknames_.erase(nicknames_.begin() + i);
+			continue;
+		}
+
+		websocketpp::lib::error_code ec;
+		server_.send(handlers_[i], payload, websocketpp::frame::opcode::text, ec);
+		if (ec) {
+			handlers_.erase(handlers_.begin() + i);
+			nicknames_.erase(nicknames_.begin() + i);
+		}
+		else {
+			++i;
+		}
+	}
+}
+
+void chat_server::on_close(server*, websocketpp::connection_hdl hdl) {
+	remove_handler(hdl);
+}
+
+void chat_server::on_fail(server*, websocketpp::connection_hdl hdl) {
+	remove_handler(hdl);
 }

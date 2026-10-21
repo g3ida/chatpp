@@ -19,9 +19,10 @@
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 #include "client.hpp"
-#include "queue.hpp"
+#include "message.hpp"
 
-class vector;
+#include <string>
+#include <vector>
 
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
@@ -34,12 +35,15 @@ namespace chatpp {
 	class chat_server {
 	public :
 		chat_server(websocketpp::log::level log_level = websocketpp::log::alevel::none);
-		void on_recieve_message(server*, websocketpp::connection_hdl hdl, client_message_ptr_t msg);
 		void start(int port = 9002);
+	private :
+		void on_receive_message(server*, websocketpp::connection_hdl hdl, client_message_ptr_t msg);
+		void on_close(server*, websocketpp::connection_hdl hdl);
+		void on_fail(server*, websocketpp::connection_hdl hdl);
+		void remove_handler(websocketpp::connection_hdl hdl);
+		void broadcast(const message& msg);
 		std::vector<std::string>::iterator get_nickname(websocketpp::connection_hdl hdl);
 
-		message_queue msg_queue_;
-	private :
 		std::vector<websocketpp::connection_hdl> handlers_;
 		std::vector<std::string> nicknames_;
 		websocketpp::server<websocketpp::config::asio> server_;

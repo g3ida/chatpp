@@ -111,11 +111,18 @@ void chat_client::on_fail(client_t* client, websocketpp::connection_hdl hdl) {
 	status_msg_ = con->get_ec().message();
 }
 
-void chat_client::on_message(websocketpp::client<websocketpp::config::asio_client>* c, websocketpp::connection_hdl hdl, client_message_ptr_t msg) {
-	websocketpp::lib::error_code ec;
-	c->send(hdl, msg->get_payload(), msg->get_opcode(), ec);
-	if (ec) {
+void chat_client::on_message(websocketpp::client<websocketpp::config::asio_client>*, websocketpp::connection_hdl, client_message_ptr_t msg) {
+	if (msg->get_opcode() != websocketpp::frame::opcode::text) {
+		return;
+	}
+	try {
+		message m = nlohmann::json::parse(msg->get_payload()).get<message>();
+		if (m.message_type == message::type::text) {
+			msg_queue_.enqueue(std::make_pair(std::move(m.nickname), std::move(m.content)));
+		}
+	}
+	catch (std::exception& e) {
 		std::lock_guard<std::mutex> lk(status_mutex_);
-		status_msg_ = ec.message();
+		status_msg_ = e.what();
 	}
 }

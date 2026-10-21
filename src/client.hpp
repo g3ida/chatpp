@@ -18,6 +18,8 @@
 
 #include <websocketpp/config/asio_no_tls_client.hpp>
 #include <websocketpp/client.hpp>
+#include "queue.hpp"
+
 #include <atomic>
 #include <mutex>
 #include <string>
@@ -47,6 +49,8 @@ namespace chatpp {
 		status getStatus() const;
 		std::string getServerStr();
 		std::string getErrorMessage();
+
+		message_queue msg_queue_;
 
 	private :
 		void on_open(client_t* client, websocketpp::connection_hdl hdl);
