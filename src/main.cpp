@@ -66,14 +66,22 @@ int main(int argc, char* argv[]) {
 					" > " << msg << rang::fg::reset << std::endl;
 			}	
 		});
-		t.detach();
 
 		std::string message;
 		while (true) {
 			std::cout  << rang::style::bold << nickname << "> " << rang::fg::reset;
-			std::getline(std::cin, message);
+			if (!std::getline(std::cin, message)) {
+				break;
+			}
+			if (cclient.getStatus() != chatpp::chat_client::status::open) {
+				break;
+			}
 			cclient.send(message);
 		}
+
+		cclient.stop();
+		cserver.stop();
+		t.join();
 	}
 	catch (websocketpp::exception const& e) {
 		std::cout << e.what() << std::endl;
