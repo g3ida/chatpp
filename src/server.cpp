@@ -69,8 +69,8 @@ void chat_server::on_receive_message(server*, websocketpp::connection_hdl hdl, c
 			break;
 		}
 	}
-	catch (std::exception& e) {
-		std::cout << e.what() << std::endl;
+	catch (std::exception&) {
+		std::cout << "invalid message" << std::endl;
 	}
 }
 
