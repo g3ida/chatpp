@@ -57,6 +57,14 @@ int main(int argc, char* argv[]) {
 			std::this_thread::sleep_for(200ms);
 		};
 
+		if (cclient.getStatus() != chatpp::chat_client::status::open) {
+			std::cout << rang::fg::red << "Connection failed : " <<
+				cclient.getErrorMessage() << rang::fg::reset << std::endl;
+			cclient.stop();
+			cserver.stop();
+			return 1;
+		}
+
 		cclient.send_nickname(nickname);
 		
 		std::thread t([&]() { 
@@ -85,10 +93,12 @@ int main(int argc, char* argv[]) {
 	}
 	catch (websocketpp::exception const& e) {
 		std::cout << e.what() << std::endl;
+		return 1;
 	}
 	catch (std::exception& e) {
 		std::cout << "other exception : " << e.what() << std::endl;
+		return 1;
 	}
 
-	//chat_server.stop();
+	return 0;
 }
