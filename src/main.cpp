@@ -93,19 +93,27 @@ int main(int argc, char* argv[]) {
 			}	
 		});
 
-		std::string message;
-		while (true) {
-			{
-				std::lock_guard<std::mutex> lk(print_mutex);
-				std::cout << rang::style::bold << sanitize(nickname) << "> " << rang::fg::reset;
+		try {
+			std::string message;
+			while (true) {
+				{
+					std::lock_guard<std::mutex> lk(print_mutex);
+					std::cout << rang::style::bold << sanitize(nickname) << "> " << rang::fg::reset;
+				}
+				if (!std::getline(std::cin, message)) {
+					break;
+				}
+				if (cclient.getStatus() != chatpp::chat_client::status::open) {
+					break;
+				}
+				cclient.send(message);
 			}
-			if (!std::getline(std::cin, message)) {
-				break;
-			}
-			if (cclient.getStatus() != chatpp::chat_client::status::open) {
-				break;
-			}
-			cclient.send(message);
+		}
+		catch (...) {
+			cclient.stop();
+			cserver.stop();
+			t.join();
+			throw;
 		}
 
 		cclient.stop();
