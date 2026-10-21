@@ -18,6 +18,17 @@ This project is tested to build using the following compilers:
 - Clang
 - GCC
 
+## dependencies
+Header-only libraries are vendored under `extern/`:
+- Asio 1.32.0
+- WebSocket++ 0.8.2
+- nlohmann/json 3.12.0
+- CLI11 2.7.2
+- rang 3.3
+
+Asio is pinned to 1.32.0 because newer releases removed the `io_service` API
+still used by WebSocket++ 0.8.2.
+
 ## usage
 Run `chatpp`, enter a nickname and the destination URI (for example `ws://127.0.0.1:9002`).
 Every instance provides a relay server and connects to the URI you enter.
