@@ -12,8 +12,6 @@ message::message(type t, std::string content, std::optional<unsigned int> tt) :
 		timestamps = tt.value();
 	}
 	else {
-		std::time_t now = std::time(0);
-		std::tm* now_tm = std::gmtime(&now);
-		timestamps = static_cast<decltype(timestamps)>(std::mktime(now_tm));
+		timestamps = static_cast<decltype(timestamps)>(std::time(nullptr));
 	}
 }
