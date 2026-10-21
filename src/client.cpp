@@ -55,14 +55,14 @@ void chat_client::send(std::string msg) {
 	nlohmann::json msg_json_object;
 	to_json(msg_json_object, message(message::type::text, msg));
 	std::string json_str = msg_json_object.dump();
-	client_.send(cnx_ptr_->get_handle(), json_str.data(), json_str.size()+1, websocketpp::frame::opcode::text);
+	client_.send(cnx_ptr_->get_handle(), json_str.data(), json_str.size(), websocketpp::frame::opcode::text);
 }
 
 void chat_client::send_nickname(std::string nickname) {
 	nlohmann::json msg_json_object;
 	to_json(msg_json_object, message(message::type::nickname, nickname));
 	std::string json_str = msg_json_object.dump();
-	client_.send(cnx_ptr_->get_handle(), json_str.data(), json_str.size() + 1, websocketpp::frame::opcode::text);
+	client_.send(cnx_ptr_->get_handle(), json_str.data(), json_str.size(), websocketpp::frame::opcode::text);
 }
 
 chat_client::status chat_client::getStatus() {
