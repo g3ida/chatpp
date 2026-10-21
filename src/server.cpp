@@ -32,8 +32,10 @@ void chat_server::stop() {
 	if (thread_.joinable()) {
 		thread_.join();
 	}
-	websocketpp::lib::error_code ec;
-	server_.stop_listening(ec);
+	if (server_.is_listening()) {
+		websocketpp::lib::error_code ec;
+		server_.stop_listening(ec);
+	}
 }
 
 // Callback to handle incoming messages

@@ -61,9 +61,9 @@ namespace chatpp {
 		void on_fail(client_t* client, websocketpp::connection_hdl hdl);
 		void on_message(websocketpp::client<websocketpp::config::asio_client>* c, websocketpp::connection_hdl hdl, client_message_ptr_t msg);
 		std::atomic<status> status_{ status::closed };
+		client_t client_;
 		client_connection_ptr_t cnx_ptr_;
 		websocketpp::connection_hdl hdl_;
-		client_t client_;
 		std::string server_str_;
 		std::string status_msg_;
 		mutable std::mutex status_mutex_;

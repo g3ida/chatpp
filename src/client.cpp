@@ -39,6 +39,7 @@ void chat_client::stop() {
 	if (thread_.joinable()) {
 		thread_.join();
 	}
+	cnx_ptr_.reset();
 }
 
 void chat_client::start(std::string URI) {
