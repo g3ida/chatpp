@@ -25,15 +25,17 @@ namespace chatpp {
 		message() = default;
 		message(const message&) = default;
 		message(type t, std::string content, std::optional<unsigned int> tt = std::nullopt);
-		type message_type;
+		type message_type = type::text;
 		std::string content;
-		unsigned int timestamps;
+		std::string nickname;
+		unsigned int timestamps = 0;
 	};
 
 	inline void to_json(nlohmann::json& j, const message& m) {
 		j = nlohmann::json{ 
 			{"type", static_cast<int>(m.message_type)},
 			{"content", m.content},
+			{"nickname", m.nickname},
 			{"timestamps", m.timestamps}
 		};
 	}
@@ -41,7 +43,8 @@ namespace chatpp {
 	inline void from_json(const nlohmann::json& j, message& m) {
 		j.at("type").get_to(m.message_type);
 		j.at("content").get_to(m.content);
-		j.at("timestamps").get_to(m.timestamps);
+		m.nickname = j.value("nickname", std::string{});
+		m.timestamps = j.value("timestamps", 0u);
 	}
 }
 #endif
