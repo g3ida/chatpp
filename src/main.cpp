@@ -57,6 +57,7 @@ int main(int argc, char* argv[]) {
 		bool insecure = false;
 		bool allow_plaintext = false;
 		int max_connections = 100;
+		int max_connections_per_ip = 5;
 
 		//add configuration file
 		app.set_config("--conf")->default_val("conf.ini");
@@ -91,6 +92,9 @@ int main(int argc, char* argv[]) {
 		app.add_option("--max-connections", max_connections,
 			"maximum simultaneous clients")->default_val("100");
 
+		app.add_option("--max-connections-per-ip", max_connections_per_ip,
+			"maximum simultaneous clients per address")->default_val("5");
+
 		CLI11_PARSE(app, argc, argv);
 
 		if (token.empty()) {
@@ -115,6 +119,10 @@ int main(int argc, char* argv[]) {
 		}
 		if (max_connections < 1) {
 			std::cout << "--max-connections must be at least 1" << std::endl;
+			return 1;
+		}
+		if (max_connections_per_ip < 1) {
+			std::cout << "--max-connections-per-ip must be at least 1" << std::endl;
 			return 1;
 		}
 #ifndef CHATPP_ENABLE_TLS
@@ -146,6 +154,7 @@ int main(int argc, char* argv[]) {
 		}
 		cserver->set_server_token(server_token);
 		cserver->set_max_connections(static_cast<std::size_t>(max_connections));
+		cserver->set_max_connections_per_ip(static_cast<std::size_t>(max_connections_per_ip));
 
 		cserver->start(host, port);
 		std::cout << rang::fg::yellow << "Listening on " << host << ":" <<

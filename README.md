@@ -47,6 +47,7 @@ Options:
 - `--server-token` token required from clients of this server
 - `--token` token sent to the destination server
 - `--max-connections` maximum simultaneous clients (default `100`)
+- `--max-connections-per-ip` maximum simultaneous clients per address (default `5`)
 - `--allow-plaintext` allow unencrypted non-local connections
 
 ## security
@@ -80,9 +81,10 @@ Tokens are sent in plaintext over `ws://`; use `wss://` outside loopback.
 
 ### rate limits
 Each connection is limited to 20 messages per second (burst 40) and 256 KiB per
-second (burst 512 KiB). Connections above `--max-connections` are rejected, and
-clients with more than 1 MiB of buffered outgoing data are disconnected. Abuse
-disconnects use WebSocket close code 1008.
+second (burst 512 KiB). Connections above `--max-connections` or
+`--max-connections-per-ip` are rejected, and clients with more than 1 MiB of
+buffered outgoing data are disconnected. Abuse disconnects use WebSocket close
+code 1008.
 
 TLS protects the transport only. The relay server can read every message; this
 is not end-to-end encryption.

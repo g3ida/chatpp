@@ -10,6 +10,29 @@
 
 using namespace chatpp;
 
+namespace {
+	std::string remote_ip(const std::string& endpoint) {
+		if (endpoint.empty()) {
+			return {};
+		}
+		if (endpoint.front() == '[') {
+			const auto closing = endpoint.find(']');
+			if (closing == std::string::npos) {
+				return {};
+			}
+			return endpoint.substr(1, closing - 1);
+		}
+		if (endpoint.find(':') != endpoint.rfind(':')) {
+			return endpoint;
+		}
+		const auto colon = endpoint.rfind(':');
+		if (colon == std::string::npos) {
+			return endpoint;
+		}
+		return endpoint.substr(0, colon);
+	}
+}
+
 template <typename Config>
 basic_chat_server<Config>::basic_chat_server(websocketpp::log::level log_level) {
 	// Set logging settings
@@ -77,6 +100,17 @@ bool basic_chat_server<Config>::on_validate(websocketpp::connection_hdl hdl) {
 		con->set_status(websocketpp::http::status_code::service_unavailable, "Too many connections");
 		return false;
 	}
+	if (max_connections_per_ip_ > 0) {
+		const std::string ip = remote_ip(con->get_remote_endpoint());
+		if (!ip.empty()) {
+			auto found = ip_counts_.find(ip);
+			if (found != ip_counts_.end() && found->second >= max_connections_per_ip_) {
+				con->set_status(websocketpp::http::status_code::too_many_requests,
+					"Too many connections from this address");
+				return false;
+			}
+		}
+	}
 	if (!server_token_.empty()) {
 		const std::string expected = "Bearer " + server_token_;
 		if (!constant_time_equal(con->get_request_header("Authorization"), expected)) {
@@ -89,9 +123,19 @@ bool basic_chat_server<Config>::on_validate(websocketpp::connection_hdl hdl) {
 
 template <typename Config>
 void basic_chat_server<Config>::on_open(websocketpp::connection_hdl hdl) {
+	std::string ip;
+	websocketpp::lib::error_code ec;
+	auto con = server_.get_con_from_hdl(hdl, ec);
+	if (!ec) {
+		ip = remote_ip(con->get_remote_endpoint());
+	}
+	if (!ip.empty()) {
+		++ip_counts_[ip];
+	}
 	sessions_.push_back({
 		hdl,
 		{},
+		std::move(ip),
 		token_bucket(message_rate_, message_burst_),
 		token_bucket(byte_rate_, byte_burst_)
 	});
@@ -158,9 +202,25 @@ void basic_chat_server<Config>::remove_session(websocketpp::connection_hdl hdl) 
 	for (auto it = sessions_.begin(); it != sessions_.end(); ++it) {
 		auto current = it->hdl.lock();
 		if (current && current == target) {
+			const std::string ip = it->remote_ip;
 			sessions_.erase(it);
+			release_ip(ip);
 			return;
 		}
+	}
+}
+
+template <typename Config>
+void basic_chat_server<Config>::release_ip(const std::string& ip) {
+	if (ip.empty()) {
+		return;
+	}
+	auto it = ip_counts_.find(ip);
+	if (it == ip_counts_.end()) {
+		return;
+	}
+	if (--it->second == 0) {
+		ip_counts_.erase(it);
 	}
 }
 
@@ -181,18 +241,24 @@ void basic_chat_server<Config>::broadcast(const message& msg) {
 		websocketpp::lib::error_code ec;
 		auto con = server_.get_con_from_hdl(it->hdl, ec);
 		if (ec) {
+			const std::string ip = it->remote_ip;
 			it = sessions_.erase(it);
+			release_ip(ip);
 			continue;
 		}
 		if (con->get_buffered_amount() > max_buffered_amount_) {
 			server_.close(it->hdl, websocketpp::close::status::policy_violation,
 				"too much buffered data", ec);
+			const std::string ip = it->remote_ip;
 			it = sessions_.erase(it);
+			release_ip(ip);
 			continue;
 		}
 		server_.send(it->hdl, payload, websocketpp::frame::opcode::text, ec);
 		if (ec) {
+			const std::string ip = it->remote_ip;
 			it = sessions_.erase(it);
+			release_ip(ip);
 		}
 		else {
 			++it;

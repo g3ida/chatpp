@@ -27,10 +27,10 @@
 #include "rate_limit.hpp"
 
 #include <cstddef>
+#include <map>
 #include <string>
 #include <thread>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
 using websocketpp::lib::placeholders::_1;
@@ -56,9 +56,14 @@ namespace chatpp {
 			max_connections_ = max_connections;
 		}
 
+		void set_max_connections_per_ip(std::size_t max_connections_per_ip) {
+			max_connections_per_ip_ = max_connections_per_ip;
+		}
+
 	protected :
 		std::string server_token_;
 		std::size_t max_connections_ = 100;
+		std::size_t max_connections_per_ip_ = 5;
 		std::size_t max_buffered_amount_ = 1024 * 1024;
 		double message_rate_ = 20.0;
 		double message_burst_ = 40.0;
@@ -88,6 +93,7 @@ namespace chatpp {
 		struct session {
 			websocketpp::connection_hdl hdl;
 			std::string nickname;
+			std::string remote_ip;
 			token_bucket messages;
 			token_bucket bytes;
 		};
@@ -98,11 +104,13 @@ namespace chatpp {
 		void on_close(websocketpp::connection_hdl hdl);
 		void on_fail(websocketpp::connection_hdl hdl);
 		void remove_session(websocketpp::connection_hdl hdl);
+		void release_ip(const std::string& ip);
 		void close_session(websocketpp::connection_hdl hdl, const std::string& reason);
 		void broadcast(const message& msg);
 		session* get_session(websocketpp::connection_hdl hdl);
 
 		std::vector<session> sessions_;
+		std::map<std::string, std::size_t> ip_counts_;
 		endpoint server_;
 		std::thread thread_;
 #ifdef CHATPP_ENABLE_TLS
