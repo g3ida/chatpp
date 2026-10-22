@@ -1,5 +1,5 @@
-#ifndef __DEF_AUTH_H___
-#define __DEF_AUTH_H___
+#ifndef CHATPP_AUTH_HPP
+#define CHATPP_AUTH_HPP
 
 #include <cstddef>
 #include <string>

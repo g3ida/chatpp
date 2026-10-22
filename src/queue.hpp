@@ -1,5 +1,5 @@
-#ifndef __DEF_QUEUE_H___
-#define __DEF_QUEUE_H___
+#ifndef CHATPP_QUEUE_HPP
+#define CHATPP_QUEUE_HPP
 
 #include <condition_variable>
 #include <cstddef>

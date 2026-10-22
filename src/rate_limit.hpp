@@ -1,5 +1,5 @@
-#ifndef __DEF_RATE_LIMIT_H___
-#define __DEF_RATE_LIMIT_H___
+#ifndef CHATPP_RATE_LIMIT_HPP
+#define CHATPP_RATE_LIMIT_HPP
 
 #include <algorithm>
 #include <chrono>

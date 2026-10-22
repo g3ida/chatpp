@@ -1,5 +1,5 @@
-#ifndef __DEF_SERVER_H___
-#define __DEF_SERVER_H___
+#ifndef CHATPP_SERVER_HPP
+#define CHATPP_SERVER_HPP
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -38,8 +38,6 @@ using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
 
 namespace chatpp {
-
-	using server = websocketpp::server<websocketpp::config::asio>;
 
 	class chat_server_base {
 	public :

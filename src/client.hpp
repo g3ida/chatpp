@@ -1,5 +1,5 @@
-#ifndef __DEF_CLIENT_H___
-#define __DEF_CLIENT_H___
+#ifndef CHATPP_CLIENT_HPP
+#define CHATPP_CLIENT_HPP
 
 #ifdef _WIN32
 	#include <winsock2.h>

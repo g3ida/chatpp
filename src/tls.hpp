@@ -1,5 +1,5 @@
-#ifndef __DEF_TLS_H___
-#define __DEF_TLS_H___
+#ifndef CHATPP_TLS_HPP
+#define CHATPP_TLS_HPP
 
 #ifdef CHATPP_ENABLE_TLS
 
