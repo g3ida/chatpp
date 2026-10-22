@@ -2,7 +2,7 @@
 A command line websockets chat application written in C++17.
 
 ## build
-This project can be built using cmake:
+This project requires CMake 3.20 or newer:
 ```
 cmake -S . -B build
 cmake --build build
@@ -39,9 +39,14 @@ still used by WebSocket++ 0.8.2.
 TLS support is enabled by default and additionally requires OpenSSL. It can be
 disabled at configure time with `-DCHATPP_ENABLE_TLS=OFF`.
 
+Licences: Asio (Boost 1.0), WebSocket++ (BSD-3-Clause), nlohmann/json (MIT),
+CLI11 (BSD-3-Clause), rang (MIT), OpenSSL (Apache-2.0).
+
 ## usage
 Run `chatpp`, enter a nickname and the destination URI (for example `ws://127.0.0.1:9002`).
 Every instance provides a relay server and connects to the URI you enter.
+A commented configuration example is in `src/conf.ini`; copy it next to the
+binary or pass it with `--conf`.
 
 Options:
 - `-H,--host` listening address (default `127.0.0.1`)
