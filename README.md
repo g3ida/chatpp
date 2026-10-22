@@ -9,6 +9,13 @@ cmake --build build
 ```
 This was compiled on Windows using MSVC and MinGW and on Linux using GCC and Clang.
 
+### tests
+```
+cmake -S . -B build -DCHATPP_BUILD_TESTS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
 ### supported compilers
 This project is tested to build using the following compilers:
 #### Windows
