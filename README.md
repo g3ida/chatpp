@@ -36,11 +36,17 @@ Header-only libraries are vendored under `extern/`:
 Asio is pinned to 1.32.0 because newer releases removed the `io_service` API
 still used by WebSocket++ 0.8.2.
 
+The vendored versions and SHA-256 checksums are pinned in
+`cmake/UpdateDeps.cmake`. Refresh them with:
+```
+cmake --build build --target update-deps
+```
+
 TLS support is enabled by default and additionally requires OpenSSL. It can be
 disabled at configure time with `-DCHATPP_ENABLE_TLS=OFF`.
 
 Licences: Asio (Boost 1.0), WebSocket++ (BSD-3-Clause), nlohmann/json (MIT),
-CLI11 (BSD-3-Clause), rang (MIT), OpenSSL (Apache-2.0).
+CLI11 (BSD-3-Clause), rang (Unlicense), OpenSSL (Apache-2.0).
 
 ## usage
 Run `chatpp`, enter a nickname and the destination URI (for example `ws://127.0.0.1:9002`).
