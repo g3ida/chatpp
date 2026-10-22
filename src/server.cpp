@@ -50,19 +50,18 @@ void chat_server::on_receive_message(server*, websocketpp::connection_hdl hdl, c
 			if (m.content.empty() || m.content.size() > 32) {
 				break;
 			}
-			if (auto it = get_nickname(hdl); it != nicknames_.end()) {
-				(*it) = m.content;
+			if (auto* s = get_session(hdl)) {
+				s->nickname = m.content;
 			}
 			else {
-				handlers_.emplace_back(hdl);
-				nicknames_.emplace_back(m.content);
+				sessions_.push_back({ hdl, m.content });
 			}
 			break;
 		case message::type::public_key:
 			break;
 		case message::type::text:
-			if (auto it = get_nickname(hdl); it != nicknames_.end()) {
-				m.nickname = *it;
+			if (auto* s = get_session(hdl)) {
+				m.nickname = s->nickname;
 				broadcast(m);
 			}
 			break;
@@ -80,30 +79,29 @@ void chat_server::start(const std::string& host, int port) {
 	thread_ = std::thread([this]() { server_.run(); });
 }
 
-std::vector<std::string>::iterator chat_server::get_nickname(websocketpp::connection_hdl hdl) {
-	if (!hdl.expired()) {
-		auto cnx = hdl.lock();
-		for (size_t i = 0; i < handlers_.size(); ++i) {
-			if (!handlers_[i].expired()) {
-				if (handlers_[i].lock() == cnx) {
-					return (nicknames_.begin() + i);
-				}
-			}
+chat_server::session* chat_server::get_session(websocketpp::connection_hdl hdl) {
+	auto target = hdl.lock();
+	if (!target) {
+		return nullptr;
+	}
+	for (auto& s : sessions_) {
+		auto current = s.hdl.lock();
+		if (current && current == target) {
+			return &s;
 		}
 	}
-	return nicknames_.end();
+	return nullptr;
 }
 
-void chat_server::remove_handler(websocketpp::connection_hdl hdl) {
+void chat_server::remove_session(websocketpp::connection_hdl hdl) {
 	auto target = hdl.lock();
 	if (!target) {
 		return;
 	}
-	for (size_t i = 0; i < handlers_.size(); ++i) {
-		auto current = handlers_[i].lock();
+	for (auto it = sessions_.begin(); it != sessions_.end(); ++it) {
+		auto current = it->hdl.lock();
 		if (current && current == target) {
-			handlers_.erase(handlers_.begin() + i);
-			nicknames_.erase(nicknames_.begin() + i);
+			sessions_.erase(it);
 			return;
 		}
 	}
@@ -114,30 +112,27 @@ void chat_server::broadcast(const message& msg) {
 	to_json(j, msg);
 	const std::string payload = j.dump();
 
-	for (size_t i = 0; i < handlers_.size();) {
-		auto hdl = handlers_[i].lock();
-		if (!hdl) {
-			handlers_.erase(handlers_.begin() + i);
-			nicknames_.erase(nicknames_.begin() + i);
+	for (auto it = sessions_.begin(); it != sessions_.end();) {
+		if (it->hdl.expired()) {
+			it = sessions_.erase(it);
 			continue;
 		}
 
 		websocketpp::lib::error_code ec;
-		server_.send(handlers_[i], payload, websocketpp::frame::opcode::text, ec);
+		server_.send(it->hdl, payload, websocketpp::frame::opcode::text, ec);
 		if (ec) {
-			handlers_.erase(handlers_.begin() + i);
-			nicknames_.erase(nicknames_.begin() + i);
+			it = sessions_.erase(it);
 		}
 		else {
-			++i;
+			++it;
 		}
 	}
 }
 
 void chat_server::on_close(server*, websocketpp::connection_hdl hdl) {
-	remove_handler(hdl);
+	remove_session(hdl);
 }
 
 void chat_server::on_fail(server*, websocketpp::connection_hdl hdl) {
-	remove_handler(hdl);
+	remove_session(hdl);
 }

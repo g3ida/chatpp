@@ -40,15 +40,19 @@ namespace chatpp {
 		void start(const std::string& host, int port = 9002);
 		void stop();
 	private :
+		struct session {
+			websocketpp::connection_hdl hdl;
+			std::string nickname;
+		};
+
 		void on_receive_message(server*, websocketpp::connection_hdl hdl, client_message_ptr_t msg);
 		void on_close(server*, websocketpp::connection_hdl hdl);
 		void on_fail(server*, websocketpp::connection_hdl hdl);
-		void remove_handler(websocketpp::connection_hdl hdl);
+		void remove_session(websocketpp::connection_hdl hdl);
 		void broadcast(const message& msg);
-		std::vector<std::string>::iterator get_nickname(websocketpp::connection_hdl hdl);
+		session* get_session(websocketpp::connection_hdl hdl);
 
-		std::vector<websocketpp::connection_hdl> handlers_;
-		std::vector<std::string> nicknames_;
+		std::vector<session> sessions_;
 		websocketpp::server<websocketpp::config::asio> server_;
 		std::thread thread_;
 	};
