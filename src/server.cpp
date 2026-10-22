@@ -39,6 +39,7 @@ basic_chat_server<Config>::basic_chat_server(websocketpp::log::level log_level) 
 	server_.set_access_channels(log_level);
 	server_.clear_access_channels(websocketpp::log::alevel::frame_payload);
 	server_.set_max_message_size(64 * 1024);
+	server_.set_reuse_addr(true);
 	// Initialize Asio
 	server_.init_asio();
 	// Register our handlers
