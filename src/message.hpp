@@ -1,5 +1,5 @@
-#ifndef __DEF_MESSAGE_H___
-#define __DEF_MESSAGE_H___
+#ifndef CHATPP_MESSAGE_HPP
+#define CHATPP_MESSAGE_HPP
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -24,11 +24,11 @@ namespace chatpp {
 		};
 		message() = default;
 		message(const message&) = default;
-		message(type t, std::string content, std::optional<unsigned int> tt = std::nullopt);
+		message(type t, std::string content, std::optional<std::time_t> tt = std::nullopt);
 		type message_type = type::text;
 		std::string content;
 		std::string nickname;
-		unsigned int timestamps = 0;
+		std::time_t timestamps = 0;
 	};
 
 	inline void to_json(nlohmann::json& j, const message& m) {
@@ -44,7 +44,7 @@ namespace chatpp {
 		j.at("type").get_to(m.message_type);
 		j.at("content").get_to(m.content);
 		m.nickname = j.value("nickname", std::string{});
-		m.timestamps = j.value("timestamps", 0u);
+		m.timestamps = j.value("timestamps", static_cast<std::time_t>(0));
 	}
 }
 #endif

@@ -6,12 +6,12 @@
 
 using namespace chatpp;
 	
-message::message(type t, std::string content, std::optional<unsigned int> tt) : 
+message::message(type t, std::string content, std::optional<std::time_t> tt) :
 	message_type(t), content(content) {
 	if (tt) {
-		timestamps = tt.value();
+		timestamps = *tt;
 	}
 	else {
-		timestamps = static_cast<decltype(timestamps)>(std::time(nullptr));
+		timestamps = std::time(nullptr);
 	}
 }
