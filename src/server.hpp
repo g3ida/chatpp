@@ -22,7 +22,9 @@
 #include <websocketpp/config/asio.hpp>
 #include "tls.hpp"
 #endif
+#include "auth.hpp"
 #include "message.hpp"
+#include "rate_limit.hpp"
 
 #include <cstddef>
 #include <string>
@@ -57,6 +59,11 @@ namespace chatpp {
 	protected :
 		std::string server_token_;
 		std::size_t max_connections_ = 100;
+		std::size_t max_buffered_amount_ = 1024 * 1024;
+		double message_rate_ = 20.0;
+		double message_burst_ = 40.0;
+		double byte_rate_ = 256.0 * 1024.0;
+		double byte_burst_ = 512.0 * 1024.0;
 	};
 
 	template <typename Config>
@@ -81,13 +88,17 @@ namespace chatpp {
 		struct session {
 			websocketpp::connection_hdl hdl;
 			std::string nickname;
+			token_bucket messages;
+			token_bucket bytes;
 		};
 
+		bool on_validate(websocketpp::connection_hdl hdl);
 		void on_open(websocketpp::connection_hdl hdl);
 		void on_receive_message(websocketpp::connection_hdl hdl, message_ptr msg);
 		void on_close(websocketpp::connection_hdl hdl);
 		void on_fail(websocketpp::connection_hdl hdl);
 		void remove_session(websocketpp::connection_hdl hdl);
+		void close_session(websocketpp::connection_hdl hdl, const std::string& reason);
 		void broadcast(const message& msg);
 		session* get_session(websocketpp::connection_hdl hdl);
 

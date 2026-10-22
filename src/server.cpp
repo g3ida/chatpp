@@ -19,6 +19,7 @@ basic_chat_server<Config>::basic_chat_server(websocketpp::log::level log_level) 
 	// Initialize Asio
 	server_.init_asio();
 	// Register our handlers
+	server_.set_validate_handler(bind(&basic_chat_server::on_validate, this, ::_1));
 	server_.set_message_handler(bind(&basic_chat_server::on_receive_message, this, ::_1, ::_2));
 	server_.set_open_handler(bind(&basic_chat_server::on_open, this, ::_1));
 	server_.set_close_handler(bind(&basic_chat_server::on_close, this, ::_1));
@@ -66,8 +67,34 @@ void basic_chat_server<Config>::start(const std::string& host, int port) {
 }
 
 template <typename Config>
+bool basic_chat_server<Config>::on_validate(websocketpp::connection_hdl hdl) {
+	websocketpp::lib::error_code ec;
+	auto con = server_.get_con_from_hdl(hdl, ec);
+	if (ec) {
+		return false;
+	}
+	if (max_connections_ > 0 && sessions_.size() >= max_connections_) {
+		con->set_status(websocketpp::http::status_code::service_unavailable, "Too many connections");
+		return false;
+	}
+	if (!server_token_.empty()) {
+		const std::string expected = "Bearer " + server_token_;
+		if (!constant_time_equal(con->get_request_header("Authorization"), expected)) {
+			con->set_status(websocketpp::http::status_code::unauthorized, "Unauthorized");
+			return false;
+		}
+	}
+	return true;
+}
+
+template <typename Config>
 void basic_chat_server<Config>::on_open(websocketpp::connection_hdl hdl) {
-	sessions_.push_back({ hdl, {} });
+	sessions_.push_back({
+		hdl,
+		{},
+		token_bucket(message_rate_, message_burst_),
+		token_bucket(byte_rate_, byte_burst_)
+	});
 }
 
 // Callback to handle incoming messages
@@ -76,21 +103,27 @@ void basic_chat_server<Config>::on_receive_message(websocketpp::connection_hdl h
 	if (msg->get_opcode() != websocketpp::frame::opcode::text) {
 		return;
 	}
+	auto* s = get_session(hdl);
+	if (!s) {
+		return;
+	}
+	const double payload_size = static_cast<double>(msg->get_payload().size());
+	if (!s->messages.consume() || !s->bytes.consume(payload_size)) {
+		close_session(hdl, "rate limit exceeded");
+		return;
+	}
 	try {
 		message m = nlohmann::json::parse(msg->get_payload()).template get<message>();
 		switch (m.message_type) {
 		case message::type::nickname:
-			if (m.content.empty() || m.content.size() > 32) {
-				break;
-			}
-			if (auto* s = get_session(hdl)) {
+			if (!m.content.empty() && m.content.size() <= 32) {
 				s->nickname = m.content;
 			}
 			break;
 		case message::type::public_key:
 			break;
 		case message::type::text:
-			if (auto* s = get_session(hdl); s && !s->nickname.empty()) {
+			if (!s->nickname.empty()) {
 				m.nickname = s->nickname;
 				broadcast(m);
 			}
@@ -132,18 +165,31 @@ void basic_chat_server<Config>::remove_session(websocketpp::connection_hdl hdl) 
 }
 
 template <typename Config>
+void basic_chat_server<Config>::close_session(websocketpp::connection_hdl hdl, const std::string& reason) {
+	websocketpp::lib::error_code ec;
+	server_.close(hdl, websocketpp::close::status::policy_violation, reason, ec);
+	remove_session(hdl);
+}
+
+template <typename Config>
 void basic_chat_server<Config>::broadcast(const message& msg) {
 	nlohmann::json j;
 	to_json(j, msg);
 	const std::string payload = j.dump();
 
 	for (auto it = sessions_.begin(); it != sessions_.end();) {
-		if (it->hdl.expired()) {
+		websocketpp::lib::error_code ec;
+		auto con = server_.get_con_from_hdl(it->hdl, ec);
+		if (ec) {
 			it = sessions_.erase(it);
 			continue;
 		}
-
-		websocketpp::lib::error_code ec;
+		if (con->get_buffered_amount() > max_buffered_amount_) {
+			server_.close(it->hdl, websocketpp::close::status::policy_violation,
+				"too much buffered data", ec);
+			it = sessions_.erase(it);
+			continue;
+		}
 		server_.send(it->hdl, payload, websocketpp::frame::opcode::text, ec);
 		if (ec) {
 			it = sessions_.erase(it);

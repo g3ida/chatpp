@@ -1,5 +1,6 @@
 #include "rang.hpp"
 #include <chrono>
+#include <cstdlib>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -92,6 +93,22 @@ int main(int argc, char* argv[]) {
 
 		CLI11_PARSE(app, argc, argv);
 
+		if (token.empty()) {
+			if (const char* value = std::getenv("CHATPP_TOKEN")) {
+				token = value;
+			}
+		}
+		if (server_token.empty()) {
+			if (const char* value = std::getenv("CHATPP_SERVER_TOKEN")) {
+				server_token = value;
+			}
+		}
+
+		if (token.find_first_of("\r\n") != std::string::npos ||
+			server_token.find_first_of("\r\n") != std::string::npos) {
+			std::cout << "Tokens must not contain line breaks" << std::endl;
+			return 1;
+		}
 		if (tls_cert.empty() != tls_key.empty()) {
 			std::cout << "--tls-cert and --tls-key must be used together" << std::endl;
 			return 1;
@@ -110,6 +127,11 @@ int main(int argc, char* argv[]) {
 			std::cout << "Refusing to expose an unencrypted server on a non-local address. "
 				"Use --tls-cert/--tls-key or pass --allow-plaintext." << std::endl;
 			return 1;
+		}
+		if (insecure) {
+			std::cout << rang::fg::yellow <<
+				"Warning: TLS certificate verification is disabled" <<
+				rang::fg::reset << std::endl;
 		}
 
 		std::unique_ptr<chatpp::chat_server_base> cserver;
@@ -171,6 +193,12 @@ int main(int argc, char* argv[]) {
 			cclient = std::make_unique<chatpp::chat_client>();
 		}
 		cclient->set_auth_token(token);
+
+		if (!use_tls && (!token.empty() || !server_token.empty())) {
+			std::cout << rang::fg::yellow <<
+				"Warning: authentication tokens are sent over an unencrypted connection" <<
+				rang::fg::reset << std::endl;
+		}
 
 		cclient->start(URI);
 		//wait some time until the connection is established.
